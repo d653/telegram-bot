@@ -1,54 +1,69 @@
-use std::borrow::Cow;
 use std::ops::Not;
+use std::borrow::Cow;
 
 use types::*;
 use requests::*;
 
-/// Use this method to send answers to callback queries sent from inline keyboards.
-/// The answer will be displayed to the user as a notification at the top of
-/// the chat screen or as an alert.
+/// Use this method to send answers to callback queries sent from inline keyboards. The answer will
+/// be displayed to the user as a notification at the top of the chat screen or as an alert. On
+/// success, True is returned.
 #[derive(Debug, Clone, PartialEq, PartialOrd, Serialize)]
 #[must_use = "requests do nothing unless sent"]
-pub struct AnswerCallbackQuery<'t> {
-    callback_query_id: CallbackQueryId,
-    text: Cow<'t, str>,
+pub struct AnswerCallbackQuery<'s> {
+    callback_query_id: Cow<'s, str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    text: Option<Cow<'s, str>>,
     #[serde(skip_serializing_if = "Not::not")]
     show_alert: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    url: Option<Cow<'s, str>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    cache_time: Option<Integer>,
 }
 
-impl<'i, 't> Request for AnswerCallbackQuery<'t> {
-    type Type = JsonRequestType<Self>;
-    type Response = JsonTrueToUnitResponse;
+impl<'c, 's> Request for AnswerCallbackQuery<'s> {
+    type Response = IdResponse<Message>;
 
-    fn serialize(&self) -> Result<HttpRequest, Error> {
-        Self::Type::serialize(RequestUrl::method("answerCallbackQuery"), self)
+    fn name(&self) -> &'static str {
+        "answerCallbackQuery"
     }
 }
 
-impl<'t> AnswerCallbackQuery<'t> {
-    fn new<Q, T>(query: Q, text: T) -> Self where Q: ToCallbackQueryId, T: Into<Cow<'t, str>> {
-        Self {
-            callback_query_id: query.to_callback_query_id(),
-            text: text.into(),
+impl<'s> AnswerCallbackQuery<'s> {
+    pub fn new<T>(callback_query_id: T) -> Self
+        where T: Into<Cow<'s, str>> {
+        AnswerCallbackQuery {
+            callback_query_id: callback_query_id.into(),
+            text: None,
             show_alert: false,
+            url: None,
+            cache_time: None
         }
     }
 
-    /// An alert will be shown by the client instead of a notification
-    /// at the top of the chat screen.
-    pub fn show_alert(&mut self) -> &mut Self {
-        self.show_alert = true;
+    pub fn text<T>(&mut self, text: T) -> &mut Self
+        where T: Into<Cow<'s, str>> {
+        self.text = Some(text.into());
+        self
+    }
+
+    pub fn show_alert(&mut self, show_alert: bool) -> &mut Self {
+        self.show_alert = show_alert;
+        self
+    }
+
+    pub fn url<T>(&mut self, url: T) -> &mut Self where T: Into<Cow<'s, str>> {
+        self.url = Some(url.into());
+        self
+    }
+
+    pub fn cache_time(&mut self, cache_time: Integer) -> &mut Self {
+        self.cache_time = Some(cache_time);
         self
     }
 }
 
-/// Send answers to callback queries sent from inline keyboards.
+/// Anwer Callback query.
 pub trait CanAnswerCallbackQuery {
-    fn answer<'t, T>(&self, text: T) -> AnswerCallbackQuery<'t> where T: Into<Cow<'t, str>>;
-}
-
-impl<Q> CanAnswerCallbackQuery for Q where Q: ToCallbackQueryId {
-    fn answer<'t, T>(&self, text: T) -> AnswerCallbackQuery<'t> where T: Into<Cow<'t, str>> {
-        AnswerCallbackQuery::new(&self, text)
-    }
+    fn text<'s, T>(&self, text: T) -> SendMessage<'s> where T: Into<Cow<'s, str>>;
 }

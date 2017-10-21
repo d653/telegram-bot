@@ -52,7 +52,7 @@ impl<'de> Deserialize<'de> for Update {
         maybe_field!(edited_channel_post, EditedChannelPost);
         // maybe_field!(inline_query, InlineQuery);
         // maybe_field!(chosen_inline_result, ChosenInlineResult);
-         maybe_field!(callback_query, CallbackQuery);
+        maybe_field!(callback_query, CallbackQuery);
 
         Ok(Update {
             id: raw.update_id,
