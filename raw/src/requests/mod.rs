@@ -20,6 +20,7 @@ pub mod send_location;
 pub mod send_message;
 pub mod send_venue;
 pub mod unban_chat_member;
+pub mod answer_callback_query;
 
 pub use self::_base::*;
 pub use self::delete_message::*;
@@ -43,3 +44,4 @@ pub use self::send_location::*;
 pub use self::send_message::*;
 pub use self::send_venue::*;
 pub use self::unban_chat_member::*;
+pub use self::answer_callback_query::*;
