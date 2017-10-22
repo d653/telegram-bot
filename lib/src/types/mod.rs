@@ -11,6 +11,7 @@ pub use telegram_bot_raw::{UserId, GroupId, SupergroupId, ChannelId, ChatId, Cha
 pub use telegram_bot_raw::{CallbackQuery, CallbackQueryId};
 pub use telegram_bot_raw::{MessageId, MessageKind, Forward, ForwardFrom};
 pub use telegram_bot_raw::{MessageOrChannelPost, Message, ChannelPost};
+pub use telegram_bot_raw::{ChatMember};
 pub use telegram_bot_raw::{CallbackQuery};
 pub use telegram_bot_raw::{MessageEntity, MessageEntityKind};
 pub use telegram_bot_raw::{Audio, Document, PhotoSize, Sticker, Video, Voice};

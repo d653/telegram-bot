@@ -11,3 +11,4 @@ pub use telegram_bot_raw::{KickChatMember, UnbanChatMember};
 pub use telegram_bot_raw::{EditMessageCaption, EditMessageReplyMarkup, EditMessageText};
 pub use telegram_bot_raw::{PinChatMessage, UnpinChatMessage};
 pub use telegram_bot_raw::{EditMessageLiveLocation, StopMessageLiveLocation};
+pub use telegram_bot_raw::{CanEditMessageText};
