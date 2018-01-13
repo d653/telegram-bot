@@ -25,7 +25,6 @@ pub mod send_venue;
 pub mod stop_message_live_location;
 pub mod unban_chat_member;
 pub mod unpin_chat_message;
-pub mod answer_callback_query;
 
 pub use self::_base::*;
 pub use self::answer_callback_query::*;
