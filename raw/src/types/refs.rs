@@ -66,6 +66,21 @@ impl ToSourceChat for Message {
     }
 }
 
+impl ToSourceChat for ChannelPost {
+    fn to_source_chat(&self) -> ChatId {
+        self.chat.id.into()
+    }
+}
+
+impl ToSourceChat for MessageOrChannelPost {
+    fn to_source_chat(&self) -> ChatId {
+        match self {
+            &MessageOrChannelPost::Message(ref message) => message.to_source_chat(),
+            &MessageOrChannelPost::ChannelPost(ref channel_post) => channel_post.to_source_chat(),
+        }
+    }
+}
+
 /// Unique identifier for the target chat or username of the
 /// target channel (in the format @channelusername)
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -99,6 +114,12 @@ impl ToChatRef for ChatRef {
 }
 
 impl ToChatRef for Chat {
+    fn to_chat_ref(&self) -> ChatRef {
+        self.id().to_chat_ref()
+    }
+}
+
+impl ToChatRef for MessageChat {
     fn to_chat_ref(&self) -> ChatRef {
         self.id().to_chat_ref()
     }
@@ -243,6 +264,21 @@ impl ToMessageId for Message {
     }
 }
 
+impl ToMessageId for ChannelPost {
+    fn to_message_id(&self) -> MessageId {
+        self.id
+    }
+}
+
+impl ToMessageId for MessageOrChannelPost {
+    fn to_message_id(&self) -> MessageId {
+        match self {
+            &MessageOrChannelPost::Message(ref message) => message.to_message_id(),
+            &MessageOrChannelPost::ChannelPost(ref channel_post) => channel_post.to_message_id(),
+        }
+    }
+}
+
 /// Unique message identifier inside a chat.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct MessageId(Integer);
@@ -300,6 +336,48 @@ impl<'a> From<String> for FileRef {
 }
 
 impl Serialize for FileRef {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where S: Serializer
+    {
+        serializer.serialize_str(&self.inner)
+    }
+}
+
+/// Get `CallbackQueryId` from the type reference.
+pub trait ToCallbackQueryId {
+    fn to_callback_query_id(&self) -> CallbackQueryId;
+}
+
+impl<S> ToCallbackQueryId for S where S: Deref, S::Target: ToCallbackQueryId {
+    fn to_callback_query_id(&self) -> CallbackQueryId {
+        self.deref().to_callback_query_id()
+    }
+}
+
+impl ToCallbackQueryId for CallbackQuery {
+    fn to_callback_query_id(&self) -> CallbackQueryId {
+        self.id.clone()
+    }
+}
+
+/// Unique identifier for CallbackQuery.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct CallbackQueryId {
+    inner: String
+}
+
+impl<'de> ::serde::de::Deserialize<'de> for CallbackQueryId {
+    fn deserialize<D>(deserializer: D) -> Result<CallbackQueryId, D::Error>
+        where D: ::serde::de::Deserializer<'de>
+    {
+        let inner = ::serde::de::Deserialize::deserialize(deserializer)?;
+        Ok(Self {
+            inner
+        })
+    }
+}
+
+impl Serialize for CallbackQueryId {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: Serializer
     {

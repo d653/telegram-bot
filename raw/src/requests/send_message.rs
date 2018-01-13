@@ -23,10 +23,11 @@ pub struct SendMessage<'s> {
 }
 
 impl<'c, 's> Request for SendMessage<'s> {
-    type Response = IdResponse<Message>;
+    type Type = JsonRequestType<Self>;
+    type Response = JsonIdResponse<Message>;
 
-    fn name(&self) -> &'static str {
-        "sendMessage"
+    fn serialize(&self) -> Result<HttpRequest, Error> {
+        Self::Type::serialize(RequestUrl::method("sendMessage"), self)
     }
 }
 
@@ -63,7 +64,7 @@ impl<'s> SendMessage<'s> {
         self
     }
 
-    pub fn reply_markup<R>(&mut self, reply_markup: R) -> &mut Self where R: Into<ReplyMarkup> { // TODO(knsd): nice builder?
+    pub fn reply_markup<R>(&mut self, reply_markup: R) -> &mut Self where R: Into<ReplyMarkup> {
         self.reply_markup = Some(reply_markup.into());
         self
     }

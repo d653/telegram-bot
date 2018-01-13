@@ -8,17 +8,13 @@ Rust Telegram Bot Library
   <tbody>
     <tr>
       <td><b>Documentation:</b></td>
-      <td><a href="https://docs.rs/telegram-bot/0.5.0/telegram_bot/">Latest crates.io version</a></td>
+      <td><a href="https://docs.rs/telegram-bot/">Latest crates.io version</a></td>
       <td><a href="https://telegram-rs.github.io/telegram-bot/telegram_bot/"><code>master</code></a></td>
     </tr>
   </tbody>
 </table>
 
 A library for writing your own [Telegram](https://telegram.org/) bots. More information [here](https://core.telegram.org/bots). Official API [here](https://core.telegram.org/bots/api).
-
-## **Warning!**
-
-This library will undergo a major rewrite in the next few months. Currently the **development is stalled** and many new API parts are not supported right now! If you need to write a production ready application, either wait or use another (non-Rust) library. We're sorry :(
 
 ## Example
 Here is a simple example (see [`example/simple.rs`](https://github.com/telegram-rs/telegram-bot/blob/master/lib/examples/simple.rs)):
@@ -38,7 +34,7 @@ fn main() {
     let mut core = Core::new().unwrap();
 
     let token = env::var("TELEGRAM_BOT_TOKEN").unwrap();
-    let api = Api::configure(token).build(core.handle());
+    let api = Api::configure(token).build(core.handle()).unwrap();
 
     // Fetch new updates via long poll method
     let future = api.stream().for_each(|update| {
@@ -46,19 +42,13 @@ fn main() {
         // If the received update contains a new message...
         if let UpdateKind::Message(message) = update.kind {
 
-            // Get sender's first name if available.
-            let first_name = match message.from.as_ref() {
-                Some(from) => &from.first_name,
-                None => return Ok(()) // Skip a message.
-            };
-
             if let MessageKind::Text {ref data, ..} = message.kind {
                 // Print received text message to stdout.
-                println!("<{}>: {}", first_name, data);
+                println!("<{}>: {}", &message.from.first_name, data);
 
                 // Answer message with "Hi".
                 api.spawn(message.text_reply(
-                    format!("Hi, {}! You just wrote '{}'", first_name, data)
+                    format!("Hi, {}! You just wrote '{}'", &message.from.first_name, data)
                 ));
             }
         }
@@ -75,7 +65,7 @@ You can find a bigger examples in the `examples`.
 This library is available via `crates.io`. In order to use it, just add this to your `Cargo.toml`:
 
 ```
-telegram-bot = "0.5"
+telegram-bot = "0.6"
 ```
 
 ## Collaboration
