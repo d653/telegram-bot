@@ -15,10 +15,11 @@ pub struct EditMessageCaption<'s> {
 }
 
 impl<'s> Request for EditMessageCaption<'s> {
-    type Response = IdResponse<Message>;
+    type Type = JsonRequestType<Self>;
+    type Response = JsonIdResponse<Message>;
 
-    fn name(&self) -> &'static str {
-        "editMessageCaption"
+    fn serialize(&self) -> Result<HttpRequest, Error> {
+        Self::Type::serialize(RequestUrl::method("editMessageCaption"), self)
     }
 }
 
@@ -34,7 +35,7 @@ impl<'s> EditMessageCaption<'s> {
         }
     }
 
-    pub fn reply_markup<R>(&mut self, reply_markup: R) -> &mut Self where R: Into<ReplyMarkup> { // TODO(knsd): nice builder?
+    pub fn reply_markup<R>(&mut self, reply_markup: R) -> &mut Self where R: Into<ReplyMarkup> {
         self.reply_markup = Some(reply_markup.into());
         self
     }

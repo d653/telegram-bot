@@ -1,7 +1,18 @@
 # Change Log
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 0.6.1 - 2018-02-17
+
+### Fixes
+- Re-export forgotten types ([#85](https://github.com/telegram-rs/telegram-bot/issues/85))
+
+### Features
+- pinChatMessage and unpinChatMessage methods
+- Bots can now send and receive Live Locations ([#83](https://github.com/telegram-rs/telegram-bot/issues/83))
+
+## 0.6.0 - 2018-01-09
+
+Rewritten from scratch.
 
 ## 0.5.0 - 2016-10-21
 

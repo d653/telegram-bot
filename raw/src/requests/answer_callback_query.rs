@@ -9,16 +9,16 @@ use requests::*;
 /// success, True is returned.
 #[derive(Debug, Clone, PartialEq, PartialOrd, Serialize)]
 #[must_use = "requests do nothing unless sent"]
-pub struct AnswerCallbackQuery<'s> {
-    callback_query_id: Cow<'s, str>,
+pub struct AnswerCallbackQuery<'t> {
+    callback_query_id: CallbackQueryId,
     #[serde(skip_serializing_if = "Option::is_none")]
-    text: Option<Cow<'s, str>>,
+    text: Option<Cow<'t, str>>,
     #[serde(skip_serializing_if = "Not::not")]
     show_alert: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
-    url: Option<Cow<'s, str>>,
+    url: Option<Cow<'t, str>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    cache_time: Option<Integer>,
+    cache_time: Option<i64>
 }
 
 impl<'c, 's> Request for AnswerCallbackQuery<'s> {
@@ -60,6 +60,10 @@ impl<'s> AnswerCallbackQuery<'s> {
     pub fn cache_time(&mut self, cache_time: Integer) -> &mut Self {
         self.cache_time = Some(cache_time);
         self
+    }
+
+    fn acknowledge<'t>(&self) -> AnswerCallbackQuery<'t> {
+        AnswerCallbackQuery::acknowledge(&self)
     }
 }
 
