@@ -22,10 +22,11 @@ pub struct AnswerCallbackQuery<'s> {
 }
 
 impl<'c, 's> Request for AnswerCallbackQuery<'s> {
-    type Response = IdResponse<Message>;
+    type Type = JsonRequestType<Self>;
+    type Response = JsonIdResponse<Message>;
 
-    fn name(&self) -> &'static str {
-        "answerCallbackQuery"
+    fn serialize(&self) -> Result<HttpRequest, Error> {
+        Self::Type::serialize(RequestUrl::method("answerCallbackQuery"), self)
     }
 }
 
