@@ -9,7 +9,7 @@ use requests::*;
 /// success, True is returned.
 #[derive(Debug, Clone, PartialEq, PartialOrd, Serialize)]
 #[must_use = "requests do nothing unless sent"]
-pub struct AnswerCallbackQuery<'t> {
+pub struct AnswerCallbackQuery<'s> {
     callback_query_id: CallbackQueryId,
     #[serde(skip_serializing_if = "Option::is_none")]
     text: Option<Cow<'t, str>>,
@@ -31,10 +31,9 @@ impl<'c, 's> Request for AnswerCallbackQuery<'s> {
 }
 
 impl<'s> AnswerCallbackQuery<'s> {
-    pub fn new<T>(callback_query_id: T) -> Self
-        where T: Into<Cow<'s, str>> {
+    pub fn new(callback_query_id: CallbackQueryId) -> Self {
         AnswerCallbackQuery {
-            callback_query_id: callback_query_id.into(),
+            callback_query_id: callback_query_id,
             text: None,
             show_alert: false,
             url: None,
