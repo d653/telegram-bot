@@ -25,16 +25,17 @@ pub struct UpdatesStream {
     buffer: VecDeque<Update>,
     current_request: Option<TelegramFuture<Option<Vec<Update>>>>,
     timeout: Duration,
-    error_delay: Duration
+    error_delay: Duration,
+    idx : usize
 }
 
 impl Stream for UpdatesStream {
-    type Item = Update;
+    type Item = (usize,Update);
     type Error = Error;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         if let Some(value) = self.buffer.pop_front() {
-            return Ok(Async::Ready(Some(value)))
+            return Ok(Async::Ready(Some((self.idx,value))))
         }
 
         let result = match self.current_request {
@@ -70,10 +71,10 @@ impl Stream for UpdatesStream {
             Ok(false) => {
                 let timeout = self.timeout + Duration::from_secs(1);
 
-                let request = self.api.send_timeout(GetUpdates::new()
+                let request = self.api.rcv_timeout(GetUpdates::new()
                     .offset(self.last_update + 1)
                     .timeout(self.timeout.as_secs() as Integer)
-                , timeout);
+                , timeout,self.idx);
 
                 self.current_request = Some(request);
                 self.poll()
@@ -87,11 +88,11 @@ impl Stream for UpdatesStream {
 }
 
 pub trait NewUpdatesStream {
-    fn new(api: Api, handle: Handle) -> Self;
+    fn new(api: Api, handle: Handle,idx:usize) -> Self;
 }
 
 impl NewUpdatesStream for UpdatesStream{
-    fn new(api: Api, handle: Handle) -> Self {
+    fn new(api: Api, handle: Handle,idx:usize) -> Self {
         UpdatesStream {
             api: api,
             handle: handle,
@@ -99,7 +100,8 @@ impl NewUpdatesStream for UpdatesStream{
             buffer: VecDeque::new(),
             current_request: None,
             timeout: Duration::from_secs(TELEGRAM_LONG_POLL_TIMEOUT_SECONDS),
-            error_delay: Duration::from_millis(TELEGRAM_LONG_POLL_ERROR_DELAY_MILLISECONDS)
+            error_delay: Duration::from_millis(TELEGRAM_LONG_POLL_ERROR_DELAY_MILLISECONDS),
+            idx
         }
     }
 }
