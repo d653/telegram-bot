@@ -29,12 +29,12 @@ pub struct Api {
 
 struct ApiInner {
     handle: Handle,
-    snd : Vec<(String,Box<Connector>)>,
-    sndhp : Vec<(String,Box<Connector>)>,
-    rcv : Vec<(String,Box<Connector>)>,
-    rr : RefCell<usize>,
-    rrhp : RefCell<usize>,
-    rooms : RefCell<HashMap<usize,HashSet<ChatId>>>
+    snd: Vec<(String, Box<Connector>)>,
+    sndhp: Vec<(String, Box<Connector>)>,
+    rcv: Vec<(String, Box<Connector>)>,
+    rr: RefCell<usize>,
+    rrhp: RefCell<usize>,
+    rooms: RefCell<HashMap<usize, HashSet<ChatId>>>
 }
 
 #[derive(Debug)]
@@ -215,6 +215,7 @@ impl Api {
                     (ChatId::from(0), MessageId::from(message.update_id))
                 }
             });
+
             let dup = hs[0].contains(&astext) || hs[1].contains(&astext);
 
             hs[p].insert(astext);
@@ -311,13 +312,12 @@ impl Api {
     /// ```
     pub fn send<Req: Request>(&self, request: Req, chatid : ChatId, highprio:bool)
         -> TelegramFuture<<Req::Response as ResponseType>::Type> {
-
         let request = request.serialize()
             .map_err(From::from);
 
         let request = result(request);
 
-        let idxs :Vec<usize> = self.inner.rooms.borrow_mut().iter().filter(|&(_, hs)|hs.contains(&chatid)).map(|(idx, _)| idx).cloned().collect();
+        let idxs: Vec<usize> = self.inner.rooms.borrow_mut().iter().filter(|&(_, hs)| hs.contains(&chatid)).map(|(idx, _)| idx).cloned().collect();
 
         let srr = if highprio {
             &self.inner.rrhp
@@ -326,6 +326,7 @@ impl Api {
         };
 
         *srr.borrow_mut() += 1;
+
         let r = idxs[*srr.borrow() % idxs.len()];
 
         let api = self.clone();
