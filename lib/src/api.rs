@@ -195,26 +195,26 @@ impl Api {
                 api.rooms.borrow_mut().entry(idx).or_insert_with(|| HashSet::new()).insert(m.chat.id());
             }
 
-            let astext = format!("{:?}{}", match update.kind {
+            let astext = format!("{:?}", match update.kind {
                 Message(ref message) => {
-                    message.id
+                    (message.chat.id(), message.id)
                 },
                 EditedMessage(ref message) => {
-                    message.id
+                    (message.chat.id(), message.id)
                 },
                 ChannelPost(ref message) => {
-                    message.id
+                    (ChatId::from(message.chat.id), message.id)
                 },
                 EditedChannelPost(ref message) => {
-                    message.id
+                    (ChatId::from(message.chat.id), message.id)
                 },
                 CallbackQuery(_) => {
-                    MessageId::from(0)
+                    (ChatId::from(0), MessageId::from(0))
                 },
                 Unknown(ref message) => {
-                    MessageId::from(message.update_id)
+                    (ChatId::from(0), MessageId::from(message.update_id))
                 }
-            }, idx);
+            });
             let dup = hs[0].contains(&astext) || hs[1].contains(&astext);
 
             hs[p].insert(astext);
