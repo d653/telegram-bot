@@ -16,9 +16,9 @@ use std::cell::RefCell;
 
 use futures::Stream;
 use telegram_bot_raw::Update;
-use std::collections::{HashSet,HashMap};
-use telegram_bot_raw::ChatId;
-use telegram_bot_raw::UpdateKind::Message;
+use std::collections::{HashSet, HashMap};
+use telegram_bot_raw::{ChatId, MessageId};
+use telegram_bot_raw::UpdateKind::*;
 
 
 /// Main type for sending requests to the Telegram bot API.
@@ -30,8 +30,10 @@ pub struct Api {
 struct ApiInner {
     handle: Handle,
     snd : Vec<(String,Box<Connector>)>,
+    sndhp : Vec<(String,Box<Connector>)>,
     rcv : Vec<(String,Box<Connector>)>,
     rr : RefCell<usize>,
+    rrhp : RefCell<usize>,
     rooms : RefCell<HashMap<usize,HashSet<ChatId>>>
 }
 
@@ -132,20 +134,25 @@ impl Api {
         let handle = handle.borrow().clone();
         let mut v1 : Vec<(String, Box<Connector>)> = Vec::new();
         let mut v2 : Vec<(String, Box<Connector>)> = Vec::new();
+        let mut v3 : Vec<(String,Box<Connector>)> = Vec::new();
 
         for t in tokens.iter() {
             let connector : ConnectorConfig = Default::default();
             v1.push((t.as_ref().into(), connector.take(&handle)?));
             let connector : ConnectorConfig = Default::default();
             v2.push((t.as_ref().into(), connector.take(&handle)?));
+            let connector : ConnectorConfig = Default::default();
+            v3.push((t.as_ref().into(),connector.take(&handle)?));
         }
 
         Ok(Api {
             inner: Rc::new(ApiInner {
                 snd : v1,
-                rcv : v2,
-                handle,
+                sndhp: v3,
+                rcv: v2,
+                handle: handle,
                 rr: RefCell::new(0),
+                rrhp: RefCell::new(0),
                 rooms: RefCell::new(HashMap::new())
             }),
         })
@@ -173,28 +180,47 @@ impl Api {
     /// # }
     /// ```
     pub fn stream(&self) -> Box<Stream<Item=Update,Error=Error>> {
-        let mut s: Box<Stream<Item=(usize, Update), Error=Error>> = Box::new(UpdatesStream::new(self.clone(), self.inner.handle.clone(),0));
+        let mut s: Box<Stream<Item=(usize, Update), Error=Error>> = Box::new(UpdatesStream::new(self.clone(), self.inner.handle.clone(), 0));
         for i in 1..self.inner.rcv.len() {
-            let si = UpdatesStream::new(self.clone(), self.inner.handle.clone(),i);
+            let si = UpdatesStream::new(self.clone(), self.inner.handle.clone(), i);
             s = Box::new(s.select(si));
         }
     
-        let mut hs = [HashSet::new(),HashSet::new()];
+        let mut hs = [HashSet::new(), HashSet::new()];
         let mut p = 0;
         let api = self.inner.clone();
         
-        Box::new(s.filter(move |&(idx,ref update)| {
+        Box::new(s.filter(move |&(idx, ref update)| {
             if let Message(ref m) = update.kind {
-                api.rooms.borrow_mut().entry(idx).or_insert_with(||HashSet::new()).insert(m.chat.id());
+                api.rooms.borrow_mut().entry(idx).or_insert_with(|| HashSet::new()).insert(m.chat.id());
             }
 
-            let astext = format!("{:?}", update.kind);
+            let astext = format!("{:?}", match update.kind {
+                Message(ref message) => {
+                    message.id
+                },
+                EditedMessage(ref message) => {
+                    message.id
+                },
+                ChannelPost(ref message) => {
+                    message.id
+                },
+                EditedChannelPost(ref message) => {
+                    message.id
+                },
+                CallbackQuery(_) => {
+                    MessageId::from(0)
+                },
+                Unknown(ref message) => {
+                    MessageId::from(message.update_id)
+                }
+            });
             let dup = hs[0].contains(&astext) || hs[1].contains(&astext);
 
             hs[p].insert(astext);
 
             if hs[p].len() > 10000 {
-                p = 1-p;
+                p = 1 - p;
                 hs[p].clear();
             }
 
@@ -257,8 +283,8 @@ impl Api {
     /// api.spawn(chat.text("Message"))
     /// # }
     /// # }
-    pub fn spawn<Req: Request>(&self, request: Req, chatid: ChatId) {
-        self.inner.handle.spawn(self.send(request, chatid).then(|_| Ok(())))
+    pub fn spawn<Req: Request>(&self, request: Req, chatid: ChatId, highprio: bool) {
+        self.inner.handle.spawn(self.send(request, chatid, highprio).then(|_| Ok(())))
     }
 
     /// Send a request to the Telegram server and wait for a response.
@@ -283,24 +309,35 @@ impl Api {
     /// # }
     /// # }
     /// ```
-    pub fn send<Req: Request>(&self, request: Req, chatid: ChatId)
+    pub fn send<Req: Request>(&self, request: Req, chatid : ChatId, highprio:bool)
         -> TelegramFuture<<Req::Response as ResponseType>::Type> {
+
         let request = request.serialize()
             .map_err(From::from);
 
         let request = result(request);
 
-        *self.inner.rr.borrow_mut() += 1;
-        let rr = *self.inner.rr.borrow();
+        let idxs :Vec<usize> = self.inner.rooms.borrow_mut().iter().filter(|&(_, hs)|hs.contains(&chatid)).map(|(idx, _)| idx).cloned().collect();
 
-        let idxs: Vec<usize> = self.inner.rooms.borrow_mut().iter().filter(|&(_, hs)| hs.contains(&chatid)).map(|(idx, _)| idx).cloned().collect();
+        let srr = if highprio {
+            &self.inner.rrhp
+        } else {
+            &self.inner.rr
+        };
 
-        let r = idxs[rr % idxs.len()];
+        *srr.borrow_mut() += 1;
+        let r = idxs[*srr.borrow() % idxs.len()];
 
         let api = self.clone();
         let response = request.and_then(move |request| {
-            let ref token = api.inner.snd[r].0;
-            api.inner.snd[r].1.request(token, request)
+            let pair = if highprio {
+                &api.inner.sndhp[r]
+            } else {
+                &api.inner.snd[r]
+            };
+
+            let ref token = pair.0;
+            pair.1.request(token, request)
         });
 
         let future = response.and_then(move |response| {
@@ -335,11 +372,11 @@ impl Api {
     /// # }
     /// # }
     /// ```
-    pub fn send_timeout<Req: Request>(&self, request: Req, duration: Duration, chatid: ChatId)
+    pub fn send_timeout<Req: Request>(&self, request: Req, duration: Duration, chatid: ChatId, highprio: bool)
         -> TelegramFuture<Option<<Req::Response as ResponseType>::Type>> {
         let timeout_future = result(Timeout::new(duration, &self.inner.handle))
             .flatten().map_err(From::from).map(|()| None);
-        let send_future = self.send(request, chatid).map(|resp| Some(resp));
+        let send_future = self.send(request, chatid, highprio).map(|resp| Some(resp));
 
         let future = timeout_future.select(send_future)
             .map(|(item, _next)| item)
