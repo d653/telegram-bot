@@ -188,34 +188,34 @@ impl Api {
     
         let mut hs = [HashSet::new(), HashSet::new()];
         let mut p = 0;
+
         let api = self.inner.clone();
         
         Box::new(s.filter(move |&(idx, ref update)| {
-            if let Message(ref m) = update.kind {
-                api.rooms.borrow_mut().entry(idx).or_insert_with(|| HashSet::new()).insert(m.chat.id());
-            }
-
-            let astext = format!("{:?}", match update.kind {
-                Message(ref message) => {
-                    (message.chat.id(), message.id)
+            let chatmessageid = match update.kind {
+                Message(ref m) => {
+                    (m.chat.id(), m.id)
                 },
-                EditedMessage(ref message) => {
-                    (message.chat.id(), message.id)
+                EditedMessage(ref m) => {
+                    (m.chat.id(), m.id)
                 },
-                ChannelPost(ref message) => {
-                    (ChatId::from(message.chat.id), message.id)
+                ChannelPost(ref m) => {
+                    (ChatId::from(m.chat.id), m.id)
                 },
-                EditedChannelPost(ref message) => {
-                    (ChatId::from(message.chat.id), message.id)
+                EditedChannelPost(ref m) => {
+                    (ChatId::from(m.chat.id), m.id)
                 },
                 CallbackQuery(_) => {
                     (ChatId::from(0), MessageId::from(0))
                 },
-                Unknown(ref message) => {
-                    (ChatId::from(0), MessageId::from(message.update_id))
+                Unknown(ref m) => {
+                    (ChatId::from(0), MessageId::from(m.update_id))
                 }
-            });
+            };
 
+            api.rooms.borrow_mut().entry(idx).or_insert_with(|| HashSet::new()).insert(chatmessageid.0);
+
+            let astext = format!("{:?}", chatmessageid);
             let dup = hs[0].contains(&astext) || hs[1].contains(&astext);
 
             hs[p].insert(astext);
@@ -310,14 +310,18 @@ impl Api {
     /// # }
     /// # }
     /// ```
-    pub fn send<Req: Request>(&self, request: Req, chatid : ChatId, highprio:bool)
+    pub fn send<Req: Request>(&self, request: Req, chatid: ChatId, highprio: bool)
         -> TelegramFuture<<Req::Response as ResponseType>::Type> {
         let request = request.serialize()
             .map_err(From::from);
 
         let request = result(request);
 
-        let idxs: Vec<usize> = self.inner.rooms.borrow_mut().iter().filter(|&(_, hs)| hs.contains(&chatid)).map(|(idx, _)| idx).cloned().collect();
+        let api = self.clone();
+
+        let idxs: Vec<usize> = self.inner.rooms.borrow_mut().iter().filter(|&(_, hs)| {
+            hs.contains(&chatid)
+        }).map(|(idx, _)| idx).cloned().collect();
 
         let srr = if highprio {
             &self.inner.rrhp
@@ -327,10 +331,18 @@ impl Api {
 
         *srr.borrow_mut() += 1;
 
-        let r = idxs[*srr.borrow() % idxs.len()];
+        let mut rx = None;
+        if idxs.len() > 0 {
+            rx = Some(idxs[*srr.borrow() % idxs.len()]);
+        }
 
-        let api = self.clone();
         let response = request.and_then(move |request| {
+            let r = if let Some(r) = rx {
+                r
+            } else {
+                0
+            };
+
             let pair = if highprio {
                 &api.inner.sndhp[r]
             } else {
