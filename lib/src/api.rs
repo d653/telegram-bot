@@ -228,8 +228,6 @@ impl Api {
                 hs[p].clear();
             }
 
-            println!("dup: {:?}", dup);
-
             !dup
         }).map(|(_, update)| update))
     }
