@@ -366,6 +366,15 @@ pub struct CallbackQueryId {
     inner: String
 }
 
+impl CallbackQueryId {
+    pub fn to_integer(&self) -> Integer {
+        match self.inner.parse() {
+            Ok(id) => id,
+            Err(_) => 0
+        }
+    }
+}
+
 impl<'de> ::serde::de::Deserialize<'de> for CallbackQueryId {
     fn deserialize<D>(deserializer: D) -> Result<CallbackQueryId, D::Error>
         where D: ::serde::de::Deserializer<'de>

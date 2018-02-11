@@ -190,7 +190,7 @@ impl Api {
         let mut p = 0;
 
         let api = self.inner.clone();
-        
+
         Box::new(s.filter(move |&(idx, ref update)| {
             let chatmessageid = match update.kind {
                 Message(ref m) => {
@@ -205,8 +205,11 @@ impl Api {
                 EditedChannelPost(ref m) => {
                     (ChatId::from(m.chat.id), m.id)
                 },
-                CallbackQuery(_) => {
-                    (ChatId::from(0), MessageId::from(0))
+                CallbackQuery(ref data) => {
+                    (ChatId::from(match data.chat_instance.parse() {
+                        Ok(number) => number,
+                        Err(_) => 0
+                    }), MessageId::from(data.id.to_integer()))
                 },
                 Unknown(ref m) => {
                     (ChatId::from(0), MessageId::from(m.update_id))
@@ -224,6 +227,8 @@ impl Api {
                 p = 1 - p;
                 hs[p].clear();
             }
+
+            println!("dup: {:?}", dup);
 
             !dup
         }).map(|(_, update)| update))
