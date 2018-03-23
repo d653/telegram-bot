@@ -218,10 +218,9 @@ impl Api {
 
             api.rooms.borrow_mut().entry(idx).or_insert_with(|| HashSet::new()).insert(chatmessageid.0);
 
-            let astext = format!("{:?}", chatmessageid);
-            let dup = hs[0].contains(&astext) || hs[1].contains(&astext);
+            let dup = hs[0].contains(&chatmessageid) || hs[1].contains(&chatmessageid);
 
-            hs[p].insert(astext);
+            hs[p].insert(chatmessageid);
 
             if hs[p].len() > 10000 {
                 p = 1 - p;
