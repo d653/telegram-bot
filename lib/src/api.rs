@@ -195,7 +195,7 @@ impl Api {
         let mut hs = [HashSet::new(), HashSet::new()];
         let mut p = 0;
 
-        let rooms = self.inner.rooms.clone();
+        let api = self.inner.clone();
         Box::new(s.filter(move |&(idx, ref update)| {
             let chatmessageid = match update.kind {
                 Message(ref m) => {
@@ -221,7 +221,7 @@ impl Api {
                 }
             };
 
-            rooms.borrow_mut().entry(idx).or_insert_with(|| HashSet::new()).insert(chatmessageid.0);
+            api.rooms.borrow_mut().entry(idx).or_insert_with(|| HashSet::new()).insert(chatmessageid.0);
 
             let dup = hs[0].contains(&chatmessageid) || hs[1].contains(&chatmessageid);
 
@@ -357,13 +357,17 @@ impl Api {
 
         let rx = match send_type {
             SendType::DETERMINISTIC => {
-                0
+                if idxs.len() > 0 {
+                    idxs[0]
+                } else {
+                    0
+                }
             },
             _ => {
                 if idxs.len() > 0 {
                     *srr.borrow_mut() += 1;
 
-                    *srr.borrow() % idxs.len()
+                    idxs[*srr.borrow() % idxs.len()]
                 } else {
                     0
                 }
@@ -373,10 +377,10 @@ impl Api {
         let response = request.and_then(move |request| {
             let pair = match send_type {
                 SendType::HIGHPRIO => {
-                    &api.inner.sndhp[idxs[rx]]
+                    &api.inner.sndhp[rx]
                 },
                 _ => {
-                    &api.inner.snd[idxs[rx]]
+                    &api.inner.snd[rx]
                 },
             };
 
