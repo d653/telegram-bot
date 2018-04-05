@@ -363,7 +363,7 @@ impl Api {
                 if idxs.len() > 0 {
                     *srr.borrow_mut() += 1;
 
-                    idxs[*srr.borrow() % idxs.len()]
+                    *srr.borrow() % idxs.len()
                 } else {
                     0
                 }
@@ -373,10 +373,10 @@ impl Api {
         let response = request.and_then(move |request| {
             let pair = match send_type {
                 SendType::HIGHPRIO => {
-                    &api.inner.sndhp[rx]
+                    &api.inner.sndhp[idxs[rx]]
                 },
                 _ => {
-                    &api.inner.snd[rx]
+                    &api.inner.snd[idxs[rx]]
                 },
             };
 
