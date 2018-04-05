@@ -69,6 +69,12 @@ pub struct Config {
     connector: ConnectorConfig,
 }
 
+pub enum SendType {
+    LOWPRIO,
+    HIGHPRIO,
+    DETERMINISTIC,
+}
+
 impl Config {
     /// Set connector type for an `Api`.
     pub fn connector(self, connector: Box<Connector>) -> Config {
@@ -285,8 +291,8 @@ impl Api {
     /// api.spawn(chat.text("Message"))
     /// # }
     /// # }
-    pub fn spawn<Req: Request>(&self, request: Req, chatid: ChatId, highprio: bool, bot_index: Option<usize>) {
-        self.inner.handle.spawn(self.send(request, chatid, highprio, bot_index).then(|_| Ok(())))
+    pub fn spawn<Req: Request>(&self, request: Req, chatid: ChatId, send_type: SendType) {
+        self.inner.handle.spawn(self.send(request, chatid, send_type).then(|_| Ok(())))
     }
 
     /// Send a request to the Telegram server and wait for a response.
@@ -311,7 +317,7 @@ impl Api {
     /// # }
     /// # }
     /// ```
-    pub fn send<Req: Request>(&self, request: Req, chatid: ChatId, highprio: bool, bot_index: Option<usize>)
+    pub fn send<Req: Request>(&self, request: Req, chatid: ChatId, send_type: SendType)
         -> TelegramFuture<<Req::Response as ResponseType>::Type> {
         let request = request.serialize()
             .map_err(From::from);
@@ -324,35 +330,41 @@ impl Api {
             hs.contains(&chatid)
         }).map(|(idx, _)| idx).cloned().collect();
 
-        let srr = if highprio {
-            &self.inner.rrhp
-        } else {
-            &self.inner.rr
+        let srr = match send_type {
+            SendType::HIGHPRIO => {
+                &self.inner.rrhp
+            },
+            SendType::DETERMINISTIC => {
+                &self.inner.rr
+            },
+            SendType::LOWPRIO => {
+                &self.inner.rr
+            },
         };
 
-        let rx = {
-            if let Some(index) = bot_index {
-                Some(index)
-            } else if idxs.len() > 0 {
-                *srr.borrow_mut() += 1;
+        let rx = match send_type {
+            SendType::DETERMINISTIC => {
+                0
+            },
+            _ => {
+                if idxs.len() > 0 {
+                    *srr.borrow_mut() += 1;
 
-                Some(idxs[*srr.borrow() % idxs.len()])
-            } else {
-                None
-            }
+                    idxs[*srr.borrow() % idxs.len()]
+                } else {
+                    0
+                }
+            },
         };
 
         let response = request.and_then(move |request| {
-            let r = if let Some(r) = rx {
-                r
-            } else {
-                0
-            };
-
-            let pair = if highprio {
-                &api.inner.sndhp[r]
-            } else {
-                &api.inner.snd[r]
+            let pair = match send_type {
+                SendType::HIGHPRIO => {
+                    &api.inner.sndhp[rx]
+                },
+                _ => {
+                    &api.inner.snd[rx]
+                },
             };
 
             let ref token = pair.0;
@@ -391,11 +403,11 @@ impl Api {
     /// # }
     /// # }
     /// ```
-    pub fn send_timeout<Req: Request>(&self, request: Req, duration: Duration, chatid: ChatId, highprio: bool)
+    pub fn send_timeout<Req: Request>(&self, request: Req, duration: Duration, chatid: ChatId, send_type: SendType)
         -> TelegramFuture<Option<<Req::Response as ResponseType>::Type>> {
         let timeout_future = result(Timeout::new(duration, &self.inner.handle))
             .flatten().map_err(From::from).map(|()| None);
-        let send_future = self.send(request, chatid, highprio, None).map(|resp| Some(resp));
+        let send_future = self.send(request, chatid, send_type).map(|resp| Some(resp));
 
         let future = timeout_future.select(send_future)
             .map(|(item, _next)| item)
