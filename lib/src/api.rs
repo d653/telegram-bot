@@ -250,7 +250,20 @@ impl Api {
         });
 
         let future = response.and_then(move |response| {
-            Req::Response::deserialize(response).map_err(From::from)
+            let result = Req::Response::deserialize(response.clone()).map_err(From::from);
+
+            match result {
+                Ok(_) => {},
+                Err(_) => {
+                    use std::str;
+
+                    if let Some(ref body) = response.body {
+                        println!("Error! Response body: {:?}", str::from_utf8(body));
+                    }
+                }
+            }
+
+            result
         });
 
         TelegramFuture::new(Box::new(future))
