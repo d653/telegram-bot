@@ -364,9 +364,9 @@ impl Api {
                 }
             },
             _ => {
-                if idxs.len() > 0 {
-                    *srr.borrow_mut() += 1;
+                *srr.borrow_mut() += 1;
 
+                if idxs.len() > 0 {
                     idxs[*srr.borrow() % idxs.len()]
                 } else {
                     0
