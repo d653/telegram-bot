@@ -9,7 +9,7 @@ use requests::*;
 /// success, True is returned.
 #[derive(Debug, Clone, PartialEq, PartialOrd, Serialize)]
 #[must_use = "requests do nothing unless sent"]
-pub struct AnswerCallbackQuery<'s> {
+pub struct AnswerCallbackQuery<'t> {
     callback_query_id: CallbackQueryId,
     #[serde(skip_serializing_if = "Option::is_none")]
     text: Option<Cow<'t, str>>,
@@ -60,10 +60,6 @@ impl<'s> AnswerCallbackQuery<'s> {
     pub fn cache_time(&mut self, cache_time: Integer) -> &mut Self {
         self.cache_time = Some(cache_time);
         self
-    }
-
-    fn acknowledge<'t>(&self) -> AnswerCallbackQuery<'t> {
-        AnswerCallbackQuery::acknowledge(&self)
     }
 }
 
