@@ -594,7 +594,7 @@ pub struct MessageEntity {
     /// Length of the entity in UTF-16 code units
     length: Integer,
     /// Kind of the entity.
-    kind: MessageEntityKind,
+    pub kind: MessageEntityKind,
 }
 
 /// Kind of the entity.
