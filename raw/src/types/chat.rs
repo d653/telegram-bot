@@ -116,6 +116,7 @@ impl<'de> Deserialize<'de> for Chat {
                     username: raw.username,
                     first_name: required_field!(first_name),
                     last_name: raw.last_name,
+                    language_code: raw.language_code,
                 })
             }
             "group" => {
@@ -160,6 +161,8 @@ pub struct RawChat {
     pub first_name: Option<String>,
     /// Last name of the other party in a private chat
     pub last_name: Option<String>,
+    /// IETF language tag of the other party in a private chat
+    pub language_code: Option<String>,
     /// True if a group has ‘All Members Are Admins’ enabled.
     pub all_members_are_administrators: Option<bool>,
 }
