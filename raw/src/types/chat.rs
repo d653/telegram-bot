@@ -13,6 +13,8 @@ pub struct User {
     pub last_name: Option<String>,
     /// User‘s or bot’s username.
     pub username: Option<String>,
+    /// IETF language tag of the user's language
+    pub language_code: Option<String>,
 }
 
 /// This object represents a group.
