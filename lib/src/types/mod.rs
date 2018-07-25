@@ -20,3 +20,4 @@ pub use telegram_bot_raw::{ParseMode};
 pub use telegram_bot_raw::{ReplyMarkup, InlineKeyboardMarkup, InlineKeyboardButton, InlineKeyboardButtonKind, ReplyKeyboardMarkup, KeyboardButton};
 pub use telegram_bot_raw::{ReplyKeyboardRemove, ForceReply};
 pub use telegram_bot_raw::{ChatAction};
+pub use telegram_bot_raw::{ChatMember, ChatMemberStatus};
