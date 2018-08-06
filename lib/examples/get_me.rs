@@ -1,10 +1,10 @@
 extern crate telegram_bot;
-extern crate tokio_core;
+extern crate tokio;
 
 use std::env;
 
-use tokio_core::reactor::Core;
 use telegram_bot::{Api, GetMe};
+use tokio::reactor::Core;
 
 fn main() {
     let token = env::var("TELEGRAM_BOT_TOKEN").unwrap();

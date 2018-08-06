@@ -22,12 +22,12 @@ Here is a simple example (see [`example/simple.rs`](https://github.com/telegram-
 ``` rust
 extern crate futures;
 extern crate telegram_bot;
-extern crate tokio_core;
+extern crate tokio;
 
 use std::env;
 
 use futures::Stream;
-use tokio_core::reactor::Core;
+use tokio::reactor::Core;
 use telegram_bot::*;
 
 fn main() {

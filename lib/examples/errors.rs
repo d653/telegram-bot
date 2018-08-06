@@ -1,12 +1,12 @@
 extern crate futures;
 extern crate telegram_bot;
-extern crate tokio_core;
+extern crate tokio;
 
 use std::env;
 
 use futures::Stream;
-use tokio_core::reactor::Core;
 use telegram_bot::*;
+use tokio::reactor::Core;
 
 fn main() {
     let mut core = Core::new().unwrap();

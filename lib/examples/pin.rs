@@ -1,25 +1,25 @@
 extern crate futures;
 extern crate telegram_bot;
-extern crate tokio_core;
+extern crate tokio;
 
 use std::env;
 
 use futures::Stream;
-use tokio_core::reactor::Core;
 use telegram_bot::*;
+use tokio::reactor::Core;
 
 fn process(api: Api, message: Message) {
     if let MessageKind::Text { ref data, .. } = message.kind {
         match data.as_str() {
-            "/pin" => message.reply_to_message.map(|message| api.spawn(message.pin())).unwrap_or(()),
-            "/unpin" => {
-                api.spawn(message.chat.unpin_message())
-            },
-            _ => ()
+            "/pin" => message
+                .reply_to_message
+                .map(|message| api.spawn(message.pin()))
+                .unwrap_or(()),
+            "/unpin" => api.spawn(message.chat.unpin_message()),
+            _ => (),
         }
     }
 }
-
 
 fn main() {
     let token = env::var("TELEGRAM_BOT_TOKEN").unwrap();
